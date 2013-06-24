@@ -1,0 +1,17 @@
+# User Specific
+*.userprefs
+*.usertasks
+
+# Mono Project Files
+*.pidb
+*.resources
+test-results/
+
+# Build results
+
+[Dd]ebug/
+[Rr]elease/
+x64/
+build/
+[Bb]in/
+[Oo]bj/
