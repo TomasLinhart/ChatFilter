@@ -21,7 +21,21 @@ namespace ChatFilter
 
 		public static string Colorize(this string text, string what, string color)
 		{
-			return Regex.Replace(text, Regex.Escape(what), COLOR_TAG_START.WithColor(color) + what + COLOR_TAG_END, RegexOptions.IgnoreCase);
+			int start = text.IndexOf(what, 0, StringComparison.InvariantCultureIgnoreCase);
+			while (start != -1) {
+				StringBuilder builder = new StringBuilder();
+				if (start != 0) {
+					builder.Append(text.Substring(0, start));
+				}
+				builder.Append(COLOR_TAG_START.WithColor(color));
+				builder.Append(text.Substring(start, what.Length));
+				builder.Append(COLOR_TAG_END);
+				builder.Append(text.Substring(start + what.Length, text.Length - start - what.Length));
+				text = builder.ToString();
+				start = text.IndexOf(what, start + COLOR_TAG_START.WithColor(color).Length + what.Length, StringComparison.InvariantCultureIgnoreCase);
+			}
+
+			return text;
 		}
 	}
 }
