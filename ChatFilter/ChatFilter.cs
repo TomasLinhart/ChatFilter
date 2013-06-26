@@ -27,7 +27,7 @@ namespace ChatFilter
 
 		public static int GetVersion()
 		{
-			return 2;
+			return 1;
 		}
 
 		public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version)
