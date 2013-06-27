@@ -14,10 +14,12 @@ namespace ChatFilter
 		private const string FILTER_COLOR = "fde50d";
 
 		private List<string> filteredTexts;
+		private List<string> highlightedTexts;
 
 		public ChatFilter()
 		{
 			filteredTexts = new List<string>();
+			highlightedTexts = new List<string>();
 		}
 
 		public static string GetName()
@@ -27,7 +29,7 @@ namespace ChatFilter
 
 		public static int GetVersion()
 		{
-			return 1;
+			return 2;
 		}
 
 		public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version)
@@ -55,7 +57,7 @@ namespace ChatFilter
 				{
 					RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
 
-					if (msg.text.ToLower().StartsWith("/filter")) {
+					if (msg.IsCommand("/filter") || msg.IsCommand("/f")) {
 						String[] splitted = msg.text.Split(new char[] {' '}, 2);
 
 						if (splitted.Length == 2) {
@@ -64,9 +66,23 @@ namespace ChatFilter
 						}
 
 						return true;
-					} else if (msg.text.ToLower().StartsWith("/resetfilter")) {
+					} else if (msg.IsCommand("/resetfilter") || msg.IsCommand("/rf")) {
 						filteredTexts.Clear();
 						SendMessage("Filters have been reseted");
+
+						return true;
+					} else if (msg.IsCommand("/highlight") || msg.IsCommand("/hl")) {
+						String[] splitted = msg.text.Split(new char[] {' '}, 2);
+
+						if (splitted.Length == 2) {
+							AddHighlight(splitted[1].ToLower());
+							SendMessage("Current highlights: " + string.Join(", ", highlightedTexts.ToArray()));
+						}
+
+						return true;
+					} else if (msg.IsCommand("/resethighlight") || msg.IsCommand("/rhl")) {
+						highlightedTexts.Clear();
+						SendMessage("Highlights have been reseted");
 
 						return true;
 					}
@@ -76,19 +92,26 @@ namespace ChatFilter
 			if (info.targetMethod.Equals("ChatMessage")) {
 				RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
 
+				msg.text = ColorizeText(msg.text);
+
 				if (filteredTexts.Count == 0 ||
-				    msg.from.ToLower() == App.MyProfile.ProfileInfo.name.ToLower()) { // don't filter my message
+				    msg.from.ToLower() == App.MyProfile.ProfileInfo.name.ToLower() ||
+				    msg.roomName.StartsWith("trade-") ||
+				    msg.from == "Scrolls") { // don't filter my message
 					return false;
 				}
 
 				foreach (String filteredText in filteredTexts) {
 					if (msg.text.ToLower().Contains(filteredText)) {
-						msg.text = ColorizeText(msg.text);
 						return false;
 					}
 				}
 
-				return true;
+				if (filteredTexts.Count > 0) {
+					return true;
+				} else {
+					return false;
+				}
 			}
 
 			return false;
@@ -116,12 +139,21 @@ namespace ChatFilter
 				text = text.Colorize(filteredText, FILTER_COLOR);
 			}
 
+			foreach (String highlightedText in highlightedTexts) {
+				text = text.Colorize(highlightedText, FILTER_COLOR);
+			}
+
 			return text;
 		}
 
-		public void AddFilter(string filteredText)
+		public void AddFilter(string text)
 		{
-			filteredTexts.Add(filteredText);
+			filteredTexts.Add(text);
+		}
+
+		public void AddHighlight(string text)
+		{
+			highlightedTexts.Add(text);
 		}
 	}
 }
