@@ -87,16 +87,14 @@ namespace ChatFilter
 						return true;
 					}
 				}
-			}
-
-			if (info.targetMethod.Equals("ChatMessage")) {
+			} else if (info.targetMethod.Equals("ChatMessage")) {
 				RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
 
 				msg.text = ColorizeText(msg.text);
 
 				if (filteredTexts.Count == 0 ||
 				    msg.from.ToLower() == App.MyProfile.ProfileInfo.name.ToLower() ||
-				    msg.roomName.StartsWith("trade-") ||
+				    msg.roomName.ToLower().StartsWith("trade-") ||
 				    msg.from == "Scrolls" ||
 				    msg.from == "ChatFilter") { // don't filter my messages
 					return false;
@@ -108,11 +106,7 @@ namespace ChatFilter
 					}
 				}
 
-				if (filteredTexts.Count > 0) {
-					return true;
-				} else {
-					return false;
-				}
+				return filteredTexts.Count > 0;
 			}
 
 			return false;
