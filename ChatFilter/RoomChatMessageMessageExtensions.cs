@@ -6,7 +6,7 @@ namespace ChatFilter
 	{
 		public static bool IsCommand(this RoomChatMessageMessage msg, string command)
 		{
-			return msg.text.ToLower().StartsWith(command);
+			return msg.text.ToLower().Split(' ')[0].Equals(command);
 		}
 	}
 }
