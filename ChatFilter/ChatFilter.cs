@@ -97,7 +97,8 @@ namespace ChatFilter
 				if (filteredTexts.Count == 0 ||
 				    msg.from.ToLower() == App.MyProfile.ProfileInfo.name.ToLower() ||
 				    msg.roomName.StartsWith("trade-") ||
-				    msg.from == "Scrolls") { // don't filter my message
+				    msg.from == "Scrolls" ||
+				    msg.from == "ChatFilter") { // don't filter my messages
 					return false;
 				}
 
