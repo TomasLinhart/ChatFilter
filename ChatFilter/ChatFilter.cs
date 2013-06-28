@@ -5,6 +5,7 @@ using UnityEngine;
 using Mono.Cecil;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace ChatFilter
 {
@@ -16,10 +17,18 @@ namespace ChatFilter
 		private List<string> filteredTexts;
 		private List<string> highlightedTexts;
 
+		private List<string> highlightedCards;
+
+		private bool filterLibrary;
+
 		public ChatFilter()
 		{
 			filteredTexts = new List<string>();
 			highlightedTexts = new List<string>();
+
+			highlightedCards = new List<string>();
+
+			filterLibrary = false;
 		}
 
 		public static string GetName()
@@ -85,6 +94,38 @@ namespace ChatFilter
 						SendMessage("Highlights have been reseted");
 
 						return true;
+					} else if (msg.IsCommand("/filterlibrary")) {
+						String[] splitted = msg.text.Split(new char[] {' '}, 2);
+
+						int count = 0;
+
+						if (splitted.Length == 2) {
+							try {
+								count = byte.Parse(splitted[1]);
+							} catch (FormatException) {
+								SendMessage("Incorrect parameter!");
+							}
+						}
+
+						LibraryManager libraryManager = new LibraryManager();
+						libraryManager.LoadLibrary(() => {
+							Console.WriteLine("Loaded");
+
+							var cards = libraryManager.Cards.GroupBy(c => c.getName()).ToDictionary(grp => grp.Key, grp => grp.ToList());
+
+							highlightedCards.Clear();
+
+							foreach (var card in cards) {
+								if (card.Value.Count > count) {
+									highlightedCards.Add(card.Key.ToLower());
+								}
+							}
+
+							filterLibrary = true;
+							SendMessage("Library filter activated!");
+						});
+
+						return true;
 					}
 				}
 			} else if (info.targetMethod.Equals("ChatMessage")) {
@@ -100,13 +141,26 @@ namespace ChatFilter
 					return false;
 				}
 
-				foreach (String filteredText in filteredTexts) {
-					if (msg.text.ToLower().Contains(filteredText)) {
-						return false;
+				bool hideMessage = filteredTexts.Count > 0 || filterLibrary;
+				foreach (String card in highlightedCards) {
+					if (msg.text.ToLower().Contains(card)) {
+						hideMessage = false;
 					}
 				}
 
-				return filteredTexts.Count > 0;
+				foreach (String filteredText in filteredTexts) {
+					if (msg.text.ToLower().Contains(filteredText)) {
+						if (filterLibrary && !hideMessage) {
+							return false;
+						} else if (!filterLibrary) {
+							return false;
+						} else if (filterLibrary && hideMessage) {
+							return true;
+						}
+					}
+				}
+
+				return hideMessage || filteredTexts.Count != 0;
 			}
 
 			return false;
@@ -136,6 +190,10 @@ namespace ChatFilter
 
 			foreach (String highlightedText in highlightedTexts) {
 				text = text.Colorize(highlightedText, FILTER_COLOR);
+			}
+
+			foreach (String card in highlightedCards) {
+				text = text.Colorize(card, FILTER_COLOR);
 			}
 
 			return text;

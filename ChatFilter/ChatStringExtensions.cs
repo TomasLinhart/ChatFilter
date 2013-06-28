@@ -30,7 +30,7 @@ namespace ChatFilter
 					builder.Append(text.Substring(0, start));
 					int afterTagEnd = InColorTag(start, text);
 					if (afterTagEnd != -1) {
-						start = text.IndexOf(what, afterTagEnd);
+						start = text.IndexOf(what, afterTagEnd, StringComparison.InvariantCultureIgnoreCase);
 						continue;
 					}
 				}
