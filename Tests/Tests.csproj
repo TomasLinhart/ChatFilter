@@ -31,6 +31,9 @@
     <Reference Include="nunit.framework">
       <Private>False</Private>
     </Reference>
+    <Reference Include="ScrollsModLoader.Interfaces">
+      <HintPath>..\Libraries\ScrollsModLoader.Interfaces.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChatFilterTest.cs" />

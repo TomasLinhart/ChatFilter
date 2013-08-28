@@ -21,6 +21,10 @@ namespace ChatFilter
 
 		private bool filterLibrary;
 
+		private string[] commands = { 
+			"/filter", "/f", "/resetfilter", "/rf", "/highlight", "/hl", "/resethighlight", "/rhl", "/filterlibrary" 
+		};
+
 		public ChatFilter()
 		{
 			filteredTexts = new List<string>();
@@ -38,7 +42,7 @@ namespace ChatFilter
 
 		public static int GetVersion()
 		{
-			return 2;
+			return 3;
 		}
 
 		public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version)
@@ -56,79 +60,21 @@ namespace ChatFilter
 			}
 		}
 
-		public override bool BeforeInvoke(InvocationInfo info, out object returnValue)
+		public override void BeforeInvoke(InvocationInfo info)
 		{
-			returnValue = null;
+		}
 
-			if (info.targetMethod.Equals("sendRequest"))
+		public override void AfterInvoke(InvocationInfo info, ref object returnValue)
+		{
+		}
+
+		public override bool WantsToReplace(InvocationInfo info)
+		{
+			if (info.targetMethod.Equals("sendRequest") && info.arguments[0] is RoomChatMessageMessage) {
+				RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
+				return IsCommand(msg.text);
+			} else if (info.targetMethod.Equals("ChatMessage"))
 			{
-				if (info.arguments[0] is RoomChatMessageMessage)
-				{
-					RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
-
-					if (msg.IsCommand("/filter") || msg.IsCommand("/f")) {
-						String[] splitted = msg.text.Split(new char[] {' '}, 2);
-
-						if (splitted.Length == 2) {
-							AddFilter(splitted[1].ToLower());
-							SendMessage("Current filters: " + string.Join(", ", filteredTexts.ToArray()));
-						}
-
-						return true;
-					} else if (msg.IsCommand("/resetfilter") || msg.IsCommand("/rf")) {
-						filteredTexts.Clear();
-						SendMessage("Filters have been reseted");
-
-						return true;
-					} else if (msg.IsCommand("/highlight") || msg.IsCommand("/hl")) {
-						String[] splitted = msg.text.Split(new char[] {' '}, 2);
-
-						if (splitted.Length == 2) {
-							AddHighlight(splitted[1].ToLower());
-							SendMessage("Current highlights: " + string.Join(", ", highlightedTexts.ToArray()));
-						}
-
-						return true;
-					} else if (msg.IsCommand("/resethighlight") || msg.IsCommand("/rhl")) {
-						highlightedTexts.Clear();
-						SendMessage("Highlights have been reseted");
-
-						return true;
-					} else if (msg.IsCommand("/filterlibrary")) {
-						String[] splitted = msg.text.Split(new char[] {' '}, 2);
-
-						int count = 0;
-
-						if (splitted.Length == 2) {
-							try {
-								count = byte.Parse(splitted[1]);
-							} catch (FormatException) {
-								SendMessage("Incorrect parameter!");
-							}
-						}
-
-						LibraryManager libraryManager = new LibraryManager();
-						libraryManager.LoadLibrary(() => {
-							Console.WriteLine("Loaded");
-
-							var cards = libraryManager.Cards.GroupBy(c => c.getName()).ToDictionary(grp => grp.Key, grp => grp.ToList());
-
-							highlightedCards.Clear();
-
-							foreach (var card in cards) {
-								if (card.Value.Count > count) {
-									highlightedCards.Add(card.Key.ToLower());
-								}
-							}
-
-							filterLibrary = true;
-							SendMessage("Library filter activated!");
-						});
-
-						return true;
-					}
-				}
-			} else if (info.targetMethod.Equals("ChatMessage")) {
 				RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
 
 				msg.text = ColorizeText(msg.text);
@@ -166,9 +112,80 @@ namespace ChatFilter
 			return false;
 		}
 
-		public override void AfterInvoke(InvocationInfo info, ref object returnValue)
+		public override void ReplaceMethod(InvocationInfo info, out object returnValue)
 		{
-			return;
+			returnValue = null;
+
+			if (info.targetMethod.Equals("sendRequest"))
+			{
+				if (info.arguments[0] is RoomChatMessageMessage)
+				{
+					RoomChatMessageMessage msg = (RoomChatMessageMessage) info.arguments[0];
+
+					if (msg.IsCommand("/filter") || msg.IsCommand("/f")) {
+						String[] splitted = msg.text.Split(new char[] {' '}, 2);
+
+						if (splitted.Length == 2) {
+							AddFilter(splitted[1].ToLower());
+							SendMessage("Current filters: " + string.Join(", ", filteredTexts.ToArray()));
+						}
+					} else if (msg.IsCommand("/resetfilter") || msg.IsCommand("/rf")) {
+						filteredTexts.Clear();
+						SendMessage("Filters have been reseted");
+					} else if (msg.IsCommand("/highlight") || msg.IsCommand("/hl")) {
+						String[] splitted = msg.text.Split(new char[] {' '}, 2);
+
+						if (splitted.Length == 2) {
+							AddHighlight(splitted[1].ToLower());
+							SendMessage("Current highlights: " + string.Join(", ", highlightedTexts.ToArray()));
+						}
+					} else if (msg.IsCommand("/resethighlight") || msg.IsCommand("/rhl")) {
+						highlightedTexts.Clear();
+						SendMessage("Highlights have been reseted");
+					} else if (msg.IsCommand("/filterlibrary")) {
+						String[] splitted = msg.text.Split(new char[] {' '}, 2);
+
+						int count = 0;
+
+						if (splitted.Length == 2) {
+							try {
+								count = byte.Parse(splitted[1]);
+							} catch (FormatException) {
+								SendMessage("Incorrect parameter!");
+							}
+						}
+
+						LibraryManager libraryManager = new LibraryManager();
+						libraryManager.LoadLibrary(() => {
+							Console.WriteLine("Loaded");
+
+							var cards = libraryManager.Cards.GroupBy(c => c.getName()).ToDictionary(grp => grp.Key, grp => grp.ToList());
+
+							highlightedCards.Clear();
+
+							foreach (var card in cards) {
+								if (card.Value.Count > count) {
+									highlightedCards.Add(card.Key.ToLower());
+								}
+							}
+
+							filterLibrary = true;
+							SendMessage("Library filter activated!");
+						});
+					}
+				}
+			}
+		}
+
+		protected bool IsCommand(string command)
+		{
+			foreach (string c in commands) {
+				if (command.StartsWith(c)) {
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		protected void SendMessage(string message)
@@ -176,7 +193,7 @@ namespace ChatFilter
 			RoomChatMessageMessage msg = new RoomChatMessageMessage();
 			msg.from = GetName();
 			msg.text = message.Colorize(INFO_COLOR);
-			msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom();
+			msg.roomName = App.ArenaChat.ChatRooms.GetCurrentRoom().name;
 
 			App.ChatUI.handleMessage(msg);
 			App.ArenaChat.ChatRooms.ChatMessage(msg);
